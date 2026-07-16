@@ -465,6 +465,15 @@ function tplAuth() {
         <svg style="width:20px; height:20px; fill:#fff; margin-right:8px;" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
         Continuar con Facebook
       </button>
+      <button class="btn btn-outline btn-block" style="text-transform:none; font-family:var(--font-body); margin-bottom:10px; background:#fff; color:#000;" data-action="login-google">
+  <svg style="width:20px; height:20px; margin-right:8px;" viewBox="0 0 24 24">
+    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z"/>
+    <path fill="#34A853" d="M16.04 18.013c-1.04.72-2.405 1.111-4.04 1.111-4.11 0-7.624-2.618-9.08-6.311L-1.24 16.03C2.868 20.44 8.04 23.414 12 23.414c3.468 0 6.382-1.054 8.528-2.88l-4.488-2.521Z"/>
+    <path fill="#4A90E2" d="M23.328 12c0-.827-.082-1.636-.218-2.414H12v4.828h6.436c-.273 1.481-1.127 2.727-2.396 3.596l4.488 2.52c2.618-2.414 4.128-6.108 4.128-10.53Z"/>
+    <path fill="#FBBC05" d="M2.92 12.813A7.054 7.054 0 0 1 2.618 12c0-.282.036-.555.082-.814L-1.326 8.07C-1.764 9.273-2 10.6-2 12s.236 2.727.674 3.93l4.246-3.117Z"/>
+  </svg>
+  Continuar con Google
+</button>
     </div>
   </div>`;
 }
@@ -759,6 +768,15 @@ const handlers = {
       el.innerText = 'Continuar con Facebook'; el.disabled = false;
     }
   },
+    'login-google': async (el) => {
+    el.innerText = 'Cargando...'; el.disabled = true;
+    const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+    if (error) {
+      showToast('Error al conectar con Google');
+      el.innerText = 'Continuar con Google'; el.disabled = false;
+    }
+  },
+
   
   'close-modal': () => { modal = null; render(); },
   'close-modal-backdrop': (el, e) => { if (e.target === el) { modal = null; render(); } },
