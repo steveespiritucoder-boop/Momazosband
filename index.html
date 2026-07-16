@@ -770,7 +770,13 @@ const handlers = {
   },
     'login-google': async (el) => {
     el.innerText = 'Cargando...'; el.disabled = true;
-    const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+    const { error } = await supabaseClient.auth.signInWithOAuth({ 
+      provider: 'google',
+      options: {
+        // IMPORTANTE: Esto fuerza a Supabase a regresar EXACTAMENTE a tu link de GitHub Pages
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
     if (error) {
       showToast('Error al conectar con Google');
       el.innerText = 'Continuar con Google'; el.disabled = false;
