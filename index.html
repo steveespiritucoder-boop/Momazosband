@@ -311,16 +311,14 @@ const STATUS_META = { sin_iniciar: { label: 'Sin Iniciar' }, en_progreso: { labe
 
 const DB = {
   async initProfile(user) {
-    // Busca si el usuario de Facebook ya existe en nuestra tabla 'profiles'
     const { data } = await supabaseClient.from('profiles').select('*').eq('id', user.id);
     if (data && data.length > 0) {
       STATE.currentUserId = user.id;
     } else {
-      // Si es nuevo, lo registra. Jala su nombre de Facebook y lo pone como NO aprobado.
       await supabaseClient.from('profiles').insert([{
         id: user.id,
         nombre: user.user_metadata?.full_name || 'Músico',
-        metodo_registro: 'Facebook',
+        metodo_registro: 'Google',
         aprobado: false,
         is_admin: false
       }]);
@@ -349,13 +347,6 @@ const DB = {
   setCurrentUser(id) { STATE.currentUserId = id; localStorage.setItem('momazos_uid', id); },
   logout() { STATE.currentUserId = null; localStorage.removeItem('momazos_uid'); },
   findProfileByName(nombre) { return STATE.profiles.find(p => p.nombre.toLowerCase() === nombre.toLowerCase()); },
-
-  async registerProfile(nombre, metodo_registro) {
-    const is_admin = nombre.toLowerCase() === 'ruben';
-    const { data } = await supabaseClient.from('profiles').insert([{ nombre, metodo_registro, aprobado: is_admin, is_admin }]).select();
-    if(data) { STATE.profiles.push(data[0]); return data[0]; }
-    return null;
-  },
 
   async updateProfile(id, patch) {
     const { data } = await supabaseClient.from('profiles').update(patch).eq('id', id).select();
@@ -757,14 +748,6 @@ const handlers = {
     await supabaseClient.auth.signOut(); 
   },
   
-  'login-facebook': async (el) => {
-    el.innerText = 'Cargando...'; el.disabled = true;
-    const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'facebook' });
-    if (error) {
-      showToast('Error al conectar con Facebook');
-      el.innerText = 'Continuar con Facebook'; el.disabled = false;
-    }
-  },
     'login-google': async (el) => {
     el.innerText = 'Cargando...'; el.disabled = true;
     const { error } = await supabaseClient.auth.signInWithOAuth({ 
