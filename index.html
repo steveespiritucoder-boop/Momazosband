@@ -861,7 +861,11 @@ const handlers = {
   'logout': async () => { 
     await supabaseClient.auth.signOut(); 
   },
-  
+  'close-modal': () => { modal = null; render(); },
+'close-modal-backdrop': (el, e) => { 
+  // Solo cierra si el clic fue directamente en el fondo, no en el modal
+  if (e.target === el) { modal = null; render(); }
+},
   'login-google': async (el) => {
     el.innerText = 'Cargando...'; el.disabled = true;
     const { error } = await supabaseClient.auth.signInWithOAuth({ 
