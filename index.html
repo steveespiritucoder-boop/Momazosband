@@ -141,7 +141,6 @@ main.view { flex: 1; padding: 20px 18px 110px; max-width: 960px; width: 100%; ma
 .drawer-item.active { background: var(--surface-raised); color: #fff; border-left: 3px solid var(--accent); }
 .drawer-item.logout { margin-top: auto; color: var(--sf-red); }
 
-.section-label { font-family: var(--font-ui); font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-dim); margin: 26px 0 12px; display: flex; align-items: center; gap: 10px; }
 .rehearsal-card { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 18px 16px; margin-bottom: 14px; box-shadow: var(--shadow-card); cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
 .rehearsal-card:hover { border-color: var(--border-hi); transform: translateY(-2px); }
 .rehearsal-card::before { content: ''; position: absolute; top: 0; left: 16px; right: 16px; height: 3px; background: linear-gradient(90deg,var(--accent),transparent 70%); clip-path: polygon(0 0,4% 100%,8% 0,12% 100%,16% 0,20% 100%,24% 0,28% 100%,32% 0,36% 100%,40% 0,100% 0,100% 100%,0 100%); }
@@ -183,7 +182,6 @@ main.view { flex: 1; padding: 20px 18px 110px; max-width: 960px; width: 100%; ma
 .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
 .modal-actions .btn { flex: 1; }
 
-/* Selección de Canciones Mejorada */
 .song-list-container {
   display: flex; flex-direction: column; gap: 8px;
   max-height: 280px; overflow-y: auto; padding-right: 6px; margin-top: 6px;
@@ -207,6 +205,9 @@ main.view { flex: 1; padding: 20px 18px 110px; max-width: 960px; width: 100%; ma
 .song-select-circle svg { width: 14px; height: 14px; }
 .song-select-name { flex: 1; font-size: .95rem; font-weight: 500; }
 
+/* Drag and Drop Styles */
+.drag-item.dragging { opacity: 0.5; border: 1px dashed var(--accent); background: var(--surface-raised); }
+
 .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 26px; }
 .profile-head .field { flex: 1; margin: 0; }
 .instrument-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(110px,1fr)); gap: 12px; }
@@ -227,7 +228,7 @@ main.view { flex: 1; padding: 20px 18px 110px; max-width: 960px; width: 100%; ma
 .rehearsal-header { margin-bottom: 8px; }
 .rehearsal-header h1 { font-family: var(--font-display); font-size: 1.7rem; letter-spacing: .01em; margin-bottom: 8px; text-transform: none; }
 .tabs-row { display: flex; gap: 8px; margin: 20px 0 18px; background: var(--surface-alt); border-radius: var(--radius-md); padding: 5px; }
-.tab-btn { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 12px 10px; border-radius: var(--radius-sm); font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; }
+.tab-btn { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 12px 10px; border-radius: var(--radius-sm); font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; transition: background 0.2s, color 0.2s;}
 .tab-btn.active { background: var(--accent); color: #fff; }
 
 .instr-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -278,7 +279,6 @@ table.matrix .song-cell { text-align: left; background: var(--surface-alt); font
 <div class="grain-overlay" aria-hidden="true"></div>
 <div id="root"></div>
 
-<!-- Plantillas de iconos SVG -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
     <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13 2 3 14h7l-1 8 11-14h-7l0-6z"/></symbol>
@@ -291,6 +291,7 @@ table.matrix .song-cell { text-align: left; background: var(--surface-alt); font
     <symbol id="icon-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.6" fill="none"/></symbol>
     <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="m20 20-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9M10 12h10m0 0-3.5-3.5M20 12l-3.5 3.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-grip" viewBox="0 0 24 24"><path d="M9 5h2v2H9zm0 6h2v2H9zm0 6h2v2H9zm4-12h2v2h-2zm0 6h2v2h-2zm0 6h2v2h-2z" fill="currentColor"/></symbol>
   </defs>
 </svg>
 
@@ -318,7 +319,7 @@ const DB = {
       await supabaseClient.from('profiles').insert([{
         id: user.id,
         nombre: user.user_metadata?.full_name || 'Músico',
-        metodo_registro: 'Google',
+        metodo_registro: 'Google', 
         aprobado: false,
         is_admin: false
       }]);
@@ -329,11 +330,12 @@ const DB = {
     await this.reload();
   },
   async reload() {
+    // Al traer rehearsal_songs, ordenamos por 'orden' para respetar el Drag&Drop
     const [prof, song, reh, rs, up] = await Promise.all([
       supabaseClient.from('profiles').select('*'),
       supabaseClient.from('songs').select('*'),
       supabaseClient.from('rehearsals').select('*'),
-      supabaseClient.from('rehearsal_songs').select('*'),
+      supabaseClient.from('rehearsal_songs').select('*').order('orden', { ascending: true }),
       supabaseClient.from('user_progress').select('*')
     ]);
     STATE.profiles = prof.data || [];
@@ -344,10 +346,6 @@ const DB = {
   },
 
   getCurrentUser() { return STATE.profiles.find(p => p.id === STATE.currentUserId) || null; },
-  setCurrentUser(id) { STATE.currentUserId = id; localStorage.setItem('momazos_uid', id); },
-  logout() { STATE.currentUserId = null; localStorage.removeItem('momazos_uid'); },
-  findProfileByName(nombre) { return STATE.profiles.find(p => p.nombre.toLowerCase() === nombre.toLowerCase()); },
-
   async updateProfile(id, patch) {
     const { data } = await supabaseClient.from('profiles').update(patch).eq('id', id).select();
     if(data) {
@@ -355,12 +353,13 @@ const DB = {
       if(idx > -1) STATE.profiles[idx] = data[0];
     }
   },
-
   async approveProfile(id) { await this.updateProfile(id, { aprobado: true }); },
   getPendingProfiles() { return STATE.profiles.filter(p => !p.aprobado); },
   getApprovedProfiles() { return STATE.profiles.filter(p => p.aprobado); },
 
+  // Las canciones SIEMPRE se devuelven ordenadas alfabéticamente
   getSongs() { return [...STATE.songs].sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')); },
+  
   async addSong(titulo) {
     const { data } = await supabaseClient.from('songs').insert([{ titulo }]).select();
     if(data) { STATE.songs.push(data[0]); return data[0]; }
@@ -369,7 +368,7 @@ const DB = {
   getRehearsals() { return [...STATE.rehearsals]; },
   getRehearsal(id) { return STATE.rehearsals.find(r => r.id === id) || null; },
 
-  async upsertRehearsal(dataObj, songIds) {
+  async upsertRehearsal(dataObj, songIdsArray) {
     let reh_id = dataObj.id;
     if(reh_id) {
       await supabaseClient.from('rehearsals').update({ titulo: dataObj.titulo, fecha: dataObj.fecha, hora: dataObj.hora, lugar: dataObj.lugar }).eq('id', reh_id);
@@ -378,8 +377,9 @@ const DB = {
       const { data } = await supabaseClient.from('rehearsals').insert([{ titulo: dataObj.titulo, fecha: dataObj.fecha, hora: dataObj.hora, lugar: dataObj.lugar }]).select();
       reh_id = data[0].id;
     }
-    if(songIds.length) {
-      const rels = songIds.map(sid => ({ rehearsal_id: reh_id, song_id: sid }));
+    // Guardamos las canciones incluyendo su 'orden' basado en el índice del array (drag & drop order)
+    if(songIdsArray.length) {
+      const rels = songIdsArray.map((sid, index) => ({ rehearsal_id: reh_id, song_id: sid, orden: index }));
       await supabaseClient.from('rehearsal_songs').insert(rels);
     }
     await this.reload();
@@ -391,9 +391,11 @@ const DB = {
     STATE.rehearsal_songs = STATE.rehearsal_songs.filter(rs => rs.rehearsal_id !== id);
   },
 
+  // Obtiene las canciones de un ensayo respetando el 'orden'
   getRehearsalSongs(rehearsalId) {
-    const ids = STATE.rehearsal_songs.filter(rs => rs.rehearsal_id === rehearsalId).map(rs => rs.song_id);
-    return STATE.songs.filter(s => ids.includes(s.id));
+    const rs = STATE.rehearsal_songs.filter(rs => rs.rehearsal_id === rehearsalId).sort((a, b) => (a.orden || 0) - (b.orden || 0));
+    const ids = rs.map(r => r.song_id);
+    return ids.map(id => STATE.songs.find(s => s.id === id)).filter(Boolean);
   },
   isUpcoming(rehearsal) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -403,6 +405,33 @@ const DB = {
 
   getProgress(userId, rehearsalId, songId, instrumento) {
     return STATE.user_progress.find(up => up.user_id === userId && up.rehearsal_id === rehearsalId && up.song_id === songId && up.instrumento === instrumento) || null;
+  },
+
+  getEffectiveProgressStatus(userId, rehearsalId, songId, instrumento) {
+    // 1. Buscamos si hay un registro exacto editado para ESTE ensayo
+    const exact = this.getProgress(userId, rehearsalId, songId, instrumento);
+    if (exact) return exact.status;
+
+    // 2. Si no hay, buscamos en el historial de ensayos pasados
+    const targetReh = this.getRehearsal(rehearsalId);
+    if (!targetReh) return 'sin_iniciar';
+
+    const history = STATE.user_progress.filter(up =>
+      up.user_id === userId && up.song_id === songId && up.instrumento === instrumento && up.rehearsal_id !== rehearsalId
+    ).map(up => {
+      const r = this.getRehearsal(up.rehearsal_id);
+      return { status: up.status, fecha: r ? r.fecha : '1970-01-01' };
+    });
+
+    // Ordenamos el historial del más reciente al más antiguo
+    history.sort((a, b) => b.fecha.localeCompare(a.fecha));
+    
+    // Tomamos el último estado reportado ANTES (o el mismo día) de este ensayo
+    const pastHistory = history.filter(h => h.fecha <= targetReh.fecha);
+    
+    if (pastHistory.length > 0) return pastHistory[0].status;
+
+    return 'sin_iniciar';
   },
 
   async setProgress(userId, rehearsalId, songId, instrumento, status) {
@@ -418,7 +447,7 @@ const DB = {
   getProgressForRehearsal(rehearsalId) { return STATE.user_progress.filter(up => up.rehearsal_id === rehearsalId); },
 };
 
-let nav = { view: 'dashboard', params: {} };
+let nav = { view: 'dashboard', params: { dashTab: 'proximos' } };
 let drawerOpen = false;
 let modal = null;
 
@@ -432,7 +461,12 @@ function icon(id, cls) { return `<svg class="icon ${cls || ''}"><use href="#icon
 function initials(nombre) { return nombre.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
 function esc(str) { return String(str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-function goTo(view, params = {}) { nav = { view, params }; drawerOpen = false; render(); }
+function goTo(view, params = {}) { 
+  if(view === 'dashboard' && !params.dashTab) params.dashTab = 'proximos';
+  nav = { view, params }; 
+  drawerOpen = false; 
+  render(); 
+}
 
 function showToast(msg) {
   const t = document.getElementById('toast-root');
@@ -452,7 +486,6 @@ function tplAuth() {
     <h1 class="brand-title">MOMAZOS<br>BAND</h1>
     <div class="auth-card">
       <p>Inicia sesión con tu cuenta de Google.</p>
-      
       <button class="btn btn-outline btn-block" style="text-transform:none; font-family:var(--font-body); margin-bottom:10px; background:#fff; color:#000;" data-action="login-google">
   <svg style="width:20px; height:20px; margin-right:8px;" viewBox="0 0 24 24">
     <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z"/>
@@ -507,10 +540,22 @@ function tplShell(user, innerHTML) {
 }
 
 function summaryDots(rehearsalId) {
-  const entries = DB.getProgressForRehearsal(rehearsalId);
-  if (!entries.length) return '';
+  const songs = DB.getRehearsalSongs(rehearsalId);
+  if (!songs.length) return '';
+  
+  const members = DB.getApprovedProfiles().filter(m => m.instrumentos && m.instrumentos.length > 0);
   const counts = { sin_iniciar: 0, en_progreso: 0, completado: 0 };
-  entries.forEach(e => counts[e.status]++);
+  
+  // Calculamos los puntitos leyendo el estado "heredado" de todos los integrantes
+  songs.forEach(s => {
+    members.forEach(m => {
+      m.instrumentos.forEach(i => {
+        const st = DB.getEffectiveProgressStatus(m.id, rehearsalId, s.id, i);
+        counts[st]++;
+      });
+    });
+  });
+
   return `<div class="rc-progress-hint">
     <span class="dot-sf" style="background:var(--sf-red)"></span><span style="font-size:.74rem;color:var(--text-faint)">${counts.sin_iniciar}</span>
     <span class="dot-sf" style="background:var(--sf-yellow);margin-left:6px"></span><span style="font-size:.74rem;color:var(--text-faint)">${counts.en_progreso}</span>
@@ -541,12 +586,21 @@ function tplDashboard(user) {
   const all = DB.getRehearsals();
   const proximos = all.filter(r => DB.isUpcoming(r)).sort((a, b) => a.fecha.localeCompare(b.fecha));
   const pasados = all.filter(r => !DB.isUpcoming(r)).sort((a, b) => b.fecha.localeCompare(a.fecha));
+  const tab = nav.params.dashTab || 'proximos';
+
+  let listHtml = '';
+  if (tab === 'proximos') {
+    listHtml = proximos.length ? proximos.map(r => rehearsalCard(r, false)).join('') : `<div class="empty-state">No hay ensayos programados todavía.</div>`;
+  } else {
+    listHtml = pasados.length ? pasados.map(r => rehearsalCard(r, true)).join('') : `<div class="empty-state">Todavía no hay historial de ensayos pasados.</div>`;
+  }
 
   return `
-    <div class="section-label">${icon('bolt')} Próximos Ensayos</div>
-    ${proximos.length ? proximos.map(r => rehearsalCard(r, false)).join('') : `<div class="empty-state">No hay ensayos programados todavía.</div>`}
-    <div class="section-label">${icon('bolt')} Ensayos Pasados</div>
-    ${pasados.length ? pasados.map(r => rehearsalCard(r, true)).join('') : `<div class="empty-state">Todavía no hay historial.</div>`}
+    <div class="tabs-row" style="margin-top:0;">
+      <button class="tab-btn ${tab === 'proximos' ? 'active' : ''}" data-action="dash-tab" data-tab="proximos">PRÓXIMOS ENSAYOS</button>
+      <button class="tab-btn ${tab === 'pasados' ? 'active' : ''}" data-action="dash-tab" data-tab="pasados">ENSAYOS PASADOS</button>
+    </div>
+    ${listHtml}
     <button class="fab" data-action="add-rehearsal">${icon('plus')}</button>
   `;
 }
@@ -570,7 +624,7 @@ function tplPerfil(user) {
 }
 
 function tplSetlist() {
-  const songs = DB.getSongs();
+  const songs = DB.getSongs(); // DB.getSongs() returns sorted alphabetically
   return `
     <div class="eyebrow">${icon('bolt')} Repertorio General</div>
     <div id="song-list">
@@ -597,7 +651,7 @@ function tplRehearsalDetail(user, params) {
   const r = DB.getRehearsal(params.rehearsalId);
   if (!r) return `<div class="empty-state">Este ensayo ya no existe.</div>`;
   const tab = params.tab || 'mio';
-  const songs = DB.getRehearsalSongs(r.id);
+  const songs = DB.getRehearsalSongs(r.id); // Returns songs ordered by the 'orden' field
 
   let body = '';
   if (tab === 'mio') {
@@ -611,8 +665,8 @@ function tplRehearsalDetail(user, params) {
           ${misInstrumentos.map(k => `<button class="instr-tab ${k === activeInstr ? 'active' : ''}" data-action="switch-instrument" data-instrument="${k}">${INSTRUMENT_META[k].emoji} ${INSTRUMENT_META[k].label}</button>`).join('')}
         </div>
         ${songs.length ? songs.map(s => {
-          const prog = DB.getProgress(user.id, r.id, s.id, activeInstr);
-          const status = prog ? prog.status : 'sin_iniciar';
+          // AQUI USAMOS EL ESTADO HEREDADO
+          const status = DB.getEffectiveProgressStatus(user.id, r.id, s.id, activeInstr);
           return `
           <div class="song-progress-row">
             <div class="spr-title">${esc(s.titulo)}</div>
@@ -640,7 +694,8 @@ function tplRehearsalDetail(user, params) {
           <tbody>
             ${songs.map(s => `<tr><td class="song-cell">${esc(s.titulo)}</td>
                 ${members.map(m => m.instrumentos.map(i => {
-                  const st = (DB.getProgress(m.id, r.id, s.id, i) || {}).status || 'sin_iniciar';
+                  // AQUI USAMOS EL ESTADO HEREDADO PARA LA TABLA GLOBAL
+                  const st = DB.getEffectiveProgressStatus(m.id, r.id, s.id, i);
                   return `<td><span class="badge-sf ${st}">${STATUS_META[st].label}</span></td>`;
                 }).join('')).join('')}
               </tr>`).join('')}
@@ -684,7 +739,31 @@ function tplModal() {
   if (modal.type === 'rehearsalEditor') {
     const editing = !!modal.id;
     const r = editing ? DB.getRehearsal(modal.id) : { titulo: '', fecha: '', hora: '', lugar: '' };
-    const songs = DB.getSongs();
+    const songs = DB.getSongs(); // All songs, sorted alphabetically
+    const editorTab = modal.editorTab || 'seleccionar';
+
+    let listHtml = '';
+    if (editorTab === 'seleccionar') {
+      listHtml = songs.length ? songs.map(s => {
+        const isSel = modal.selectedSongIds.includes(s.id);
+        return `
+        <div class="song-select-item ${isSel ? 'selected' : ''}" data-action="toggle-song" data-id="${s.id}">
+          <div class="song-select-circle">${isSel ? icon('check') : ''}</div>
+          <div class="song-select-name">${esc(s.titulo)}</div>
+        </div>`;
+      }).join('') : `<div class="empty-state" style="padding:15px">Agrega canciones al Setlist primero.</div>`;
+    } else {
+      // Ordenar: Mostrar solo las seleccionadas, en el orden de modal.selectedSongIds
+      listHtml = modal.selectedSongIds.length ? modal.selectedSongIds.map(id => {
+        const s = songs.find(x => x.id === id);
+        if(!s) return '';
+        return `
+        <div class="song-select-item drag-item" draggable="true" data-id="${id}" style="cursor: grab;">
+          <div style="cursor: grab; color: var(--text-faint); margin-right: 8px;">${icon('grip')}</div>
+          <div class="song-select-name">${esc(s.titulo)}</div>
+        </div>`;
+      }).join('') : `<div class="empty-state" style="padding:15px">Selecciona canciones primero para poder ordenarlas.</div>`;
+    }
     
     return modalWrap('bottom', `
       <div class="modal-head"><h3>${editing ? 'Editar Ensayo' : 'Nuevo Ensayo'}</h3><button class="modal-close" data-action="close-modal">${icon('close')}</button></div>
@@ -696,15 +775,12 @@ function tplModal() {
       <div class="field"><label>Lugar</label><input id="reh-lugar" type="text" value="${esc(r.lugar)}"></div>
       
       <div class="field"><label>Canciones a Ensayar</label>
-        <div class="song-list-container">
-          ${songs.length ? songs.map(s => {
-            const isSel = modal.selectedSongIds.includes(s.id);
-            return `
-            <div class="song-select-item ${isSel ? 'selected' : ''}" data-action="toggle-song" data-id="${s.id}">
-              <div class="song-select-circle">${isSel ? icon('check') : ''}</div>
-              <div class="song-select-name">${esc(s.titulo)}</div>
-            </div>`;
-          }).join('') : `<div class="empty-state" style="padding:15px">Agrega canciones al Setlist primero.</div>`}
+        <div class="tabs-row" style="margin: 8px 0;">
+          <button class="tab-btn ${editorTab === 'seleccionar' ? 'active' : ''}" data-action="editor-tab" data-tab="seleccionar">SELECCIONAR</button>
+          <button class="tab-btn ${editorTab === 'ordenar' ? 'active' : ''}" data-action="editor-tab" data-tab="ordenar">ORDENAR</button>
+        </div>
+        <div class="song-list-container" id="sortable-list">
+          ${listHtml}
         </div>
       </div>
       <div class="modal-actions">
@@ -748,12 +824,11 @@ const handlers = {
     await supabaseClient.auth.signOut(); 
   },
   
-    'login-google': async (el) => {
+  'login-google': async (el) => {
     el.innerText = 'Cargando...'; el.disabled = true;
     const { error } = await supabaseClient.auth.signInWithOAuth({ 
       provider: 'google',
       options: {
-        // IMPORTANTE: Esto fuerza a Supabase a regresar EXACTAMENTE a tu link de GitHub Pages
         redirectTo: window.location.origin + window.location.pathname
       }
     });
@@ -763,18 +838,26 @@ const handlers = {
     }
   },
 
-  
   'close-modal': () => { modal = null; render(); },
   'close-modal-backdrop': (el, e) => { if (e.target === el) { modal = null; render(); } },
+  
+  'dash-tab': (el) => { nav.params.dashTab = el.dataset.tab; render(); },
+  'editor-tab': (el) => { modal.editorTab = el.dataset.tab; render(); },
   
   'open-rehearsal': (el) => goTo('ensayo-detalle', { rehearsalId: el.dataset.id, tab: 'mio' }),
   
   'edit-rehearsal': (el, e) => { 
     e.stopPropagation(); 
-    modal = { type: 'rehearsalEditor', id: el.dataset.id, selectedSongIds: DB.getRehearsalSongs(el.dataset.id).map(s => s.id) }; 
+    modal = { 
+      type: 'rehearsalEditor', 
+      id: el.dataset.id, 
+      editorTab: 'seleccionar',
+      // Get songs preserving order
+      selectedSongIds: DB.getRehearsalSongs(el.dataset.id).map(s => s.id) 
+    }; 
     render(); 
   },
-  'add-rehearsal': () => { modal = { type: 'rehearsalEditor', id: null, selectedSongIds: [] }; render(); },
+  'add-rehearsal': () => { modal = { type: 'rehearsalEditor', id: null, editorTab: 'seleccionar', selectedSongIds: [] }; render(); },
   
   'confirm-delete-rehearsal': (el, e) => {
     e.stopPropagation();
@@ -809,6 +892,7 @@ const handlers = {
     const lugar = document.getElementById('reh-lugar').value.trim();
     if (!titulo || !fecha || !lugar) return showToast('Completa título, fecha y lugar.');
     el.innerText = 'Guardando...'; el.disabled = true;
+    // Guardamos las canciones respetando el orden actual del array
     await DB.upsertRehearsal({ id: modal.id, titulo, fecha, hora, lugar }, modal.selectedSongIds);
     modal = null; render(); showToast('Ensayo guardado.');
   },
@@ -855,11 +939,57 @@ document.addEventListener('click', (e) => {
   if (el && handlers[el.dataset.action]) handlers[el.dataset.action](el, e);
 });
 
+let draggedItem = null;
+
+document.addEventListener('dragstart', (e) => {
+  if (e.target.closest('.drag-item')) {
+    draggedItem = e.target.closest('.drag-item');
+    setTimeout(() => draggedItem.classList.add('dragging'), 0);
+  }
+});
+
+document.addEventListener('dragend', (e) => {
+  if (draggedItem) {
+    draggedItem.classList.remove('dragging');
+    draggedItem = null;
+    // Actualizar el arreglo interno para reflejar el nuevo orden DOM
+    const list = document.getElementById('sortable-list');
+    if (list && modal && modal.type === 'rehearsalEditor') {
+      modal.selectedSongIds = Array.from(list.querySelectorAll('.drag-item')).map(el => el.dataset.id);
+    }
+  }
+});
+
+document.addEventListener('dragover', (e) => {
+  e.preventDefault(); // Permitir soltar
+  const container = e.target.closest('#sortable-list');
+  if (!container || !draggedItem) return;
+
+  const afterElement = getDragAfterElement(container, e.clientY);
+  if (afterElement == null) {
+    container.appendChild(draggedItem);
+  } else {
+    container.insertBefore(draggedItem, afterElement);
+  }
+});
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
 (async function init() {
   const modalRoot = document.createElement('div'); modalRoot.id = 'modal-root'; document.body.appendChild(modalRoot);
   const toastRoot = document.createElement('div'); toastRoot.id = 'toast-root'; document.body.appendChild(toastRoot);
   
-  // Escuchar la sesión de autenticación real de Supabase
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     if (session) {
       await DB.initProfile(session.user);
@@ -868,7 +998,6 @@ document.addEventListener('click', (e) => {
       STATE.currentUserId = null;
     }
     
-    // Ocultar loader
     const loader = document.getElementById('loader');
     if(loader) loader.remove();
     
