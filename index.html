@@ -247,16 +247,18 @@ main.view { flex: 1; padding: 20px 18px 110px; max-width: 960px; width: 100%; ma
 .sf-btn.active[data-status="en_progreso"] { background: var(--sf-yellow); color: #3a2900; border-color: var(--sf-yellow); }
 .sf-btn.active[data-status="completado"] { background: var(--sf-green); color: #032a15; border-color: var(--sf-green); }
 
-.matrix-wrap { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); }
+.matrix-wrap { width: 100%; overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); -webkit-overflow-scrolling: touch; }
 table.matrix { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .82rem; }
 table.matrix th,table.matrix td { padding: 10px 12px; text-align: center; border: 1px solid var(--border); white-space: nowrap; }
 table.matrix thead th { background: var(--surface-raised); font-family: var(--font-ui); text-transform: uppercase; font-weight: 500; font-size: .7rem; }
 table.matrix .member-name { font-size: .8rem; color: var(--accent-2); }
-table.matrix .song-cell { text-align: left; background: var(--surface-alt); font-size: .86rem; position: sticky; left: 0; z-index: 10;}
-.badge-sf { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 8px; border-radius: 6px; font-size: .68rem; text-transform: uppercase; font-family: var(--font-ui); min-width: 84px; }
-.badge-sf.sin_iniciar { background: var(--sf-red); color: #3a0000; }
-.badge-sf.en_progreso { background: var(--sf-yellow); color: #3a2900; }
-.badge-sf.completado { background: var(--sf-green); color: #032a15; }
+table.matrix .song-cell { text-align: left; background: var(--surface-alt); font-size: .86rem; position: sticky; left: 0; z-index: 10; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Círculos de progreso global sin texto */
+.dot-global { width: 16px; height: 16px; border-radius: 50%; display: inline-block; vertical-align: middle; }
+.dot-global.sin_iniciar { background: var(--sf-red); box-shadow: 0 0 8px rgba(255, 77, 77, 0.4); }
+.dot-global.en_progreso { background: var(--sf-yellow); box-shadow: 0 0 8px rgba(255, 193, 7, 0.4); }
+.dot-global.completado { background: var(--sf-green); box-shadow: 0 0 8px rgba(0, 230, 118, 0.4); }
 
 /* Toast Notification */
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120%); z-index: 100; background: var(--surface-raised); border: 1px solid var(--border-hi); color: #fff; padding: 12px 20px; border-radius: 999px; font-size: .85rem; box-shadow: var(--shadow-card); transition: transform .3s cubic-bezier(.32,.72,0,1); display: flex; align-items: center; gap: 8px; }
@@ -363,6 +365,22 @@ const DB = {
   async addSong(titulo) {
     const { data } = await supabaseClient.from('songs').insert([{ titulo }]).select();
     if(data) { STATE.songs.push(data[0]); return data[0]; }
+  },
+
+  async updateSong(id, titulo) {
+    const { data } = await supabaseClient.from('songs').update({ titulo }).eq('id', id).select();
+    if(data) {
+      const idx = STATE.songs.findIndex(s => s.id === id);
+      if(idx > -1) STATE.songs[idx] = data[0];
+    }
+  },
+
+  async deleteSong(id) {
+    await supabaseClient.from('songs').delete().eq('id', id);
+    // Limpieza local para que la app no crashee antes de recargar
+    STATE.songs = STATE.songs.filter(s => s.id !== id);
+    STATE.rehearsal_songs = STATE.rehearsal_songs.filter(rs => rs.song_id !== id);
+    STATE.user_progress = STATE.user_progress.filter(up => up.song_id !== id);
   },
 
   getRehearsals() { return [...STATE.rehearsals]; },
@@ -628,7 +646,16 @@ function tplSetlist() {
   return `
     <div class="eyebrow">${icon('bolt')} Repertorio General</div>
     <div id="song-list">
-      ${songs.length ? songs.map((s,i) => `<div class="song-row"><div class="title"><span class="idx">${String(i+1).padStart(2,'0')}</span>${esc(s.titulo)}</div></div>`).join('') : '<div class="empty-state">Repertorio vacío.</div>'}
+      ${songs.length ? songs.map((s,i) => `
+      <div class="song-row">
+        <div class="title" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:8px;">
+          <span class="idx">${String(i+1).padStart(2,'0')}</span>${esc(s.titulo)}
+        </div>
+        <div class="rc-actions">
+          <button class="rc-edit" style="width:30px;height:30px;" data-action="edit-song" data-id="${s.id}">${icon('pencil')}</button>
+          <button class="rc-delete" style="width:30px;height:30px;" data-action="confirm-delete-song" data-id="${s.id}">${icon('trash')}</button>
+        </div>
+      </div>`).join('') : '<div class="empty-state">Repertorio vacío.</div>'}
     </div>
     <button class="btn btn-primary btn-block" data-action="open-add-song" style="margin-top:18px">${icon('plus')} Agregar Canción</button>
   `;
@@ -672,7 +699,7 @@ function tplRehearsalDetail(user, params) {
             <div class="spr-title">${esc(s.titulo)}</div>
             <div class="sf-buttons">
               ${['sin_iniciar', 'en_progreso', 'completado'].map(st => `
-                <button class="sf-btn ${status === st ? 'active' : ''}" data-action="set-progress" data-song="${s.id}" data-instrumento="${activeInstr}" data-status-val="${st}">
+                <button class="sf-btn ${status === st ? 'active' : ''}" data-status="${st}" data-action="set-progress" data-song="${s.id}" data-instrumento="${activeInstr}" data-status-val="${st}">
                   <span class="sw"></span>${STATUS_META[st].label}
                 </button>`).join('')}
             </div>
@@ -692,11 +719,11 @@ function tplRehearsalDetail(user, params) {
             <tr>${members.map(m => m.instrumentos.map(i => `<th>${INSTRUMENT_META[i].emoji} ${INSTRUMENT_META[i].label}</th>`).join('')).join('')}</tr>
           </thead>
           <tbody>
-            ${songs.map(s => `<tr><td class="song-cell">${esc(s.titulo)}</td>
+            ${songs.map(s => `<tr><td class="song-cell" title="${esc(s.titulo)}">${esc(s.titulo)}</td>
                 ${members.map(m => m.instrumentos.map(i => {
                   // AQUI USAMOS EL ESTADO HEREDADO PARA LA TABLA GLOBAL
                   const st = DB.getEffectiveProgressStatus(m.id, r.id, s.id, i);
-                  return `<td><span class="badge-sf ${st}">${STATUS_META[st].label}</span></td>`;
+                  return `<td><div class="dot-global ${st}" title="${STATUS_META[st].label}"></div></td>`;
                 }).join('')).join('')}
               </tr>`).join('')}
           </tbody>
@@ -722,6 +749,26 @@ function tplModal() {
       <div class="modal-head"><h3>Agregar Canción</h3><button class="modal-close" data-action="close-modal">${icon('close')}</button></div>
       <div class="field"><label>Nombre de la Canción</label><input id="song-titulo" type="text" autofocus></div>
       <div class="modal-actions"><button class="btn btn-primary btn-block" data-action="save-song">Guardar</button></div>
+    `);
+  }
+
+  if (modal.type === 'editSong') {
+    const s = STATE.songs.find(x => x.id === modal.id);
+    return modalWrap('bottom', `
+      <div class="modal-head"><h3>Editar Canción</h3><button class="modal-close" data-action="close-modal">${icon('close')}</button></div>
+      <div class="field"><label>Nombre de la Canción</label><input id="edit-song-titulo" type="text" value="${esc(s?.titulo || '')}" autofocus></div>
+      <div class="modal-actions"><button class="btn btn-primary btn-block" data-action="save-edit-song" data-id="${s?.id}">Guardar</button></div>
+    `);
+  }
+
+  if (modal.type === 'confirmDeleteSong') {
+    return modalWrap('center', `
+      <div class="modal-head"><h3>Eliminar Canción</h3><button class="modal-close" data-action="close-modal">${icon('close')}</button></div>
+      <p style="color:var(--text-dim);font-size:.9rem;margin-bottom:20px;">¿Eliminar esta canción? Desaparecerá de todos los ensayos y se borrará el progreso de la banda.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-action="close-modal">Cancelar</button>
+        <button class="btn btn-primary" style="background:var(--sf-red);box-shadow:none;" data-action="delete-song" data-id="${modal.id}">Sí, Eliminar</button>
+      </div>
     `);
   }
 
@@ -920,6 +967,22 @@ const handlers = {
       el.innerText = 'Guardando...'; el.disabled = true;
       await DB.addSong(val); modal = null; render(); showToast('Canción agregada'); 
     }
+  },
+  
+  'edit-song': (el) => { modal = { type: 'editSong', id: el.dataset.id }; render(); },
+  'save-edit-song': async (el) => {
+    const val = document.getElementById('edit-song-titulo').value.trim();
+    if (val) {
+      el.innerText = 'Guardando...'; el.disabled = true;
+      await DB.updateSong(el.dataset.id, val);
+      modal = null; render(); showToast('Canción actualizada');
+    }
+  },
+  'confirm-delete-song': (el) => { modal = { type: 'confirmDeleteSong', id: el.dataset.id }; render(); },
+  'delete-song': async (el) => {
+    el.innerText = 'Borrando...'; el.disabled = true;
+    await DB.deleteSong(el.dataset.id);
+    modal = null; render(); showToast('Canción eliminada');
   },
   
   'approve-user': async (el) => { 
