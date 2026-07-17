@@ -1,0 +1,21 @@
+{
+"name": "Momazos Band - Progress Tracker",
+"short_name": "Momazos Band",
+"start_url": "./index.html",
+"display": "standalone",
+"background_color": "#121212",
+"theme_color": "#E50914",
+"description": "App oficial de seguimiento de ensayos para Momazos Band.",
+"icons": [
+{
+"src": "icon.png",
+"sizes": "192x192",
+"type": "image/png"
+},
+{
+"src": "icon.png",
+"sizes": "512x512",
+"type": "image/png"
+}
+]
+}
