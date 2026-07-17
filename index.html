@@ -255,8 +255,25 @@ table.matrix { border-collapse: collapse; width: 100%; min-width: 520px; font-si
 table.matrix th,table.matrix td { padding: 10px 12px; text-align: center; border: 1px solid var(--border); white-space: nowrap; }
 table.matrix thead th { background: var(--surface-raised); font-family: var(--font-ui); text-transform: uppercase; font-weight: 500; font-size: .7rem; }
 table.matrix .member-name { font-size: .8rem; color: var(--accent-2); }
-table.matrix .song-cell { text-align: left; background: var(--surface-alt); font-size: .86rem; position: sticky; left: 0; z-index: 10; max-width: 130px; overflow: hidden; text-overflow: ellipsis; }
-
+table.matrix .song-cell {
+  text-align: left;
+  background: var(--surface-alt);
+  font-size: .86rem;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  max-width: 90px;       /* ← más estrecho en móviles */
+  width: 80px;           /* ← ancho fijo */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;   /* ← necesario para que funcione ellipsis */
+}
+@media (min-width: 768px) {
+  table.matrix .song-cell {
+    max-width: 140px;
+    width: auto;
+  }
+}
 /* Círculos de progreso global sin texto */
 .dot-global { width: 16px; height: 16px; border-radius: 50%; display: inline-block; vertical-align: middle; }
 .dot-global.sin_iniciar { background: var(--sf-red); box-shadow: 0 0 8px rgba(255, 77, 77, 0.4); }
